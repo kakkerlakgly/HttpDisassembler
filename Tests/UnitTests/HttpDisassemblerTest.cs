@@ -1,8 +1,10 @@
 ﻿using System.Linq;
+using System;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Winterdom.BizTalk.PipelineTesting;
-using BizTalkComponents.Utils.ContextPropertyHelpers;
+using BizTalkComponents.Utils;
+using Microsoft.XLANGs.BaseTypes;
 
 namespace BizTalkComponents.HttpDisassembler.Tests.UnitTests
 {
@@ -31,10 +33,20 @@ namespace BizTalkComponents.HttpDisassembler.Tests.UnitTests
 
             Assert.AreEqual(1, result.Count);
 
-            var doc = XDocument.Load(result[0].BodyPart.GetOriginalDataStream());
+            var outputMessage = result[0];
+            var doc = XDocument.Load(outputMessage.BodyPart.GetOriginalDataStream());
 
             Assert.AreEqual("value1", doc.Descendants("TestElement1").Single().Value);
             Assert.AreEqual("value2", doc.Descendants("TestElement2").Single().Value);
+
+            string messageType;
+            var attribute = (SchemaAttribute)Attribute.GetCustomAttribute(typeof(TestSchema), typeof(SchemaAttribute));
+            Assert.IsTrue(ContextExtensions.TryRead(outputMessage.Context, new ContextProperty(SystemProperties.MessageType), out messageType));
+            Assert.AreEqual(attribute.TargetNamespace+"#"+attribute.RootElement, messageType);
+
+            string schemaStrongName;
+            Assert.IsTrue(ContextExtensions.TryRead(outputMessage.Context, new ContextProperty(SystemProperties.SchemaStrongName), out schemaStrongName));
+            Assert.AreEqual(typeof(TestSchema).AssemblyQualifiedName, schemaStrongName);
         }
     }
 }
